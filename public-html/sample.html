@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <!-- <script src="https://static.robotwebtools.org/EventEmitter2/current/eventemitter2.min.js"></script> -->
+
+    <!-- 動かす時は，ローカルにroslibのファイルを置いておいてください -->
+    <!-- パスとかも指定してね -->
+    <script type="text/javascript" src="../roslib.min.js"></script>
+
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/roslibjs/0.20.0/roslib.min.js"></script> -->
+
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #7f7f7f;
+            color: #e0e0e0;
+            display: grid;
+            grid-template-columns: 400px minmax(0, 1fr);
+            grid-template-rows: auto auto;
+            gap: 40px;
+            align-items: start;
+            padding: 40px;
+        }
+
+        .status_container {
+            background-color: #16213e;
+            border-radius: 12px;
+            padding: 32px;
+            width: 300px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            grid-column: 1;
+            grid-row: 1;
+        }
+
+        .image_container {
+            background-color: #16213e;
+            border-radius: 12px;
+            padding: 32px;
+            width: 90%;
+            height: 90%;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            /* align-items: center; */
+            grid-column: 2;
+            grid-row: 1 / span 2;
+        }
+
+        .image_container p {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
+        .controller_container {
+            background-color: #16213e;
+            border-radius: 12px;
+            padding: 32px;
+            width: 300px;
+            height: 80%;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            /* display: flex; */
+            flex-direction: column;
+            grid-column: 1;
+            grid-row: 2;
+        }
+
+        #image_sub {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 22px;
+            margin-bottom: 24px;
+            border-bottom: 2px solid #0f3460;
+            /* 見出し下線 */
+            padding-bottom: 12px;
+            text-align: center;
+        }
+
+        .info-row {
+            display: flex;
+            /* 横並びレイアウト */
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .label {
+            color: #a0a0b0;
+            font-size: 14px;
+        }
+
+        #status {
+            font-weight: bold;
+            color: #e94560;
+            /* 赤（未接続） */
+        }
+
+        #status.connected {
+            color: #4ecca3;
+            /* 緑（接続中） */
+        }
+
+        #number {
+            font-size: 28px;
+            font-weight: bold;
+            color: #4ecca3;
+        }
+
+        #button {
+            text-align: center;
+            min-height: 1.5em;
+            line-height: 1.5em;
+        }
+
+        /* Button styles */
+        .button-outline {
+            --button-color: #3223b3;
+            --button-border: #3223b3;
+            --button-background-hover: #e1dcfd;
+
+            display: flex;
+            box-sizing: border-box;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 320px;
+            height: 64px;
+            padding: 8px 24px;
+            font-size: 1rem;
+            color: var(--button-color);
+            text-align: center;
+            text-decoration: none;
+            background-color: #d2d2d2;
+            border: 2px solid var(--button-border);
+
+            @media (any-hover: hover) {
+                transition: background-color 0.2s;
+
+                &:hover {
+                    background-color: var(--button-background-hover);
+                }
+            }
+        }
+
+        .button-outline:active {
+            /* 背景色 */
+            background-color: #7968da;
+
+            /* 文字色 */
+            color: #fff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="status_container">
+        <h1>ROS Monitor</h1>
+        <div class="info-row">
+            <span class="label">接続状態</span>
+            <span id="status">N/A</span>
+        </div>
+        <hr />
+        <div class="info-row">
+            <span class="label">受信番号</span>
+            <span id="number">N/A</span>
+        </div>
+    </div>
+
+    <div class="controller_container">
+        <h1>Controller</h1>
+        <p><button class="button-outline" id="start_button">Start</button></p>
+        <p><button class="button-outline" id="stop_button">Stop</button></p>
+        <p><button class="button-outline" id="reset_button">Reset</button></p>
+        <p id="button" style="text-align: center;"></p>
+    </div>
+
+    <div class="image_container">
+        <h1>Camera Feed</h1>
+        <p><img id="image_sub" /></p>
+    </div>
+
+    <script>
+        var isPressed = false;
+
+        // Create ros object to communicate over your Rosbridge connection
+        const ros = new ROSLIB.Ros({
+            url: 'ws://localhost:9090',
+            options: {
+                ros_domain_id: '0' // ROS_DOMAIN_IDを設定する
+            }
+        });
+
+        // Rosbridgeサーバに接続されたらsuccessful
+        ros.on("connection", () => {
+            document.getElementById("status").style.color = "green";
+            document.getElementById("status").innerHTML = "successful";
+            console.log('Connected to ROSBridge WebSocket server.');
+        });
+
+        // Rosbridgeサーバに接続できなかったらerror
+        ros.on('error', function (error) {
+            document.getElementById("status").style.color = "red";
+            document.getElementById('status').innerHTML = "error"
+            console.log('Error connecting to ROSBridge WebSocket server: ', error);
+        });
+
+        // Rosbridgeサーバが閉じたらclosed
+        ros.on('close', function () {
+            document.getElementById("status").style.color = "red";
+            document.getElementById('status').innerHTML = "closed"
+            console.log('Connection to ROSBridge WebSocket server closed.');
+        });
+
+        // trueの間だけ動作するようなコードにするとかあれば
+        // ボタンを押した時に流すトピックを変えてください
+
+        var start = new ROSLIB.Topic({
+            ros: ros,
+            name: '/start',
+            messageType: 'std_msgs/msg/Bool'
+        });
+
+        var stop = new ROSLIB.Topic({
+            ros: ros,
+            name: '/stop',
+            messageType: 'std_msgs/msg/Bool'
+        });
+
+        var reset = new ROSLIB.Topic({
+            ros: ros,
+            name: '/reset',
+            messageType: 'std_msgs/msg/Bool'
+        });
+
+        var number = new ROSLIB.Topic({
+            ros: ros,
+            name: '/increment_num',
+            messageType: 'std_msgs/Float64'
+        });
+
+        var image_sub = new ROSLIB.Topic({
+            ros: ros,
+            name: '/image_raw/compressed',
+            messageType: 'sensor_msgs/CompressedImage'
+        });
+
+        // 数字系のトピックを購読して、受信したメッセージをHTMLに表示する
+        number.subscribe(function (message) {
+            console.log('Received message on ' + number.name + ': ' + message.data);
+            // var data = "data:image/png;base64," + message.data;
+            document.getElementById('number').innerHTML = message.data;
+        });
+
+        // 画像系のトピックを購読して、受信したメッセージをHTMLに表示する
+        image_sub.subscribe(function (message) {
+            console.log('Received message on ' + image_sub.name);
+            var data = "data:image/jpeg;base64," + message.data;
+            document.getElementById('image_sub').src = data;
+        });
+
+        // ボタンを押した時の動作
+
+        // 表示のためだけにボタン押下を検知するフラグを用意してます
+        // トピックは押した分だけ漏れてるので，そこらへんはロボット側と調整してください
+
+        // スタートボタン
+        document.getElementById('start_button').addEventListener('click', function () {
+            if (isPressed) {
+                return; // すでにボタンが押されている場合は何もしない
+            }
+
+            isPressed = true;
+
+            var msg = new ROSLIB.Message({
+                data: true
+            });
+
+            start.publish(msg);
+            console.log('Published message on ' + start.name + ': ' + msg.data);
+
+            // デバッグ用
+            // document.getElementById('button').innerHTML = "Start button pressed";
+            resetHTML("Start button pressed");
+        });
+
+        // ストップボタン
+        document.getElementById('stop_button').addEventListener('click', function () {
+            if (isPressed) {
+                return; // すでにボタンが押されている場合は何もしない
+            }
+
+            isPressed = true;
+
+            var msg = new ROSLIB.Message({
+                data: false
+            });
+
+            stop.publish(msg);
+            console.log('Published message on ' + stop.name + ': ' + msg.data);
+
+            // デバッグ用
+            // document.getElementById('button').innerHTML = "Stop button pressed";
+            resetHTML("Stop button pressed");
+        });
+
+        // リセットボタン
+        document.getElementById('reset_button').addEventListener('click', function () {
+            if (isPressed) {
+                return; // すでにボタンが押されている場合は何もしない
+            }
+
+            isPressed = true;
+
+            var msg = new ROSLIB.Message({
+                data: true
+            });
+
+            reset.publish(msg);
+            console.log('Published message on ' + reset.name + ': ' + msg.data);
+
+            // デバッグ用
+            // document.getElementById('button').innerHTML = "Reset button pressed";
+            resetHTML("Reset button pressed");
+        });
+
+        function resetHTML(msg) {
+            if (isPressed) {
+                document.getElementById('button').innerHTML = msg;
+                setTimeout(function () {
+                    document.getElementById('button').innerHTML = "";
+                    isPressed = false;
+                }, 1000);
+            }
+        }
+
+    </script>
+
+</body>
+
+</html>
