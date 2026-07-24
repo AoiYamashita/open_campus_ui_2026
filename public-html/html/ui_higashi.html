@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
 
     <!-- roslibのファイルを指定してください -->
-    <script type="text/javascript" src="./roslib.min.js"></script>
+    <script type="text/javascript" src="../roslib.min.js"></script>
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Find Wally</title>
@@ -789,14 +789,14 @@
 
         // Rosbridgeサーバに接続できなかったらerror
         ros.on('error', function (error) {
-            document.getElementById('hat_text').style.color = "red";
+            // document.getElementById('hat_text').style.color = "red";
             document.getElementById('hat_text').innerHTML = "ERROR HAS OCCURRED...";
             console.log('Error connecting to ROSBridge WebSocket server: ', error);
         });
 
         // Rosbridgeサーバから切断されたらclose
         ros.on('close', function () {
-            document.getElementById('hat_text').style.color = "red";
+            // document.getElementById('hat_text').style.color = "red";
             document.getElementById('hat_text').innerHTML = "CONNECTION HAS BEEN LOST...";
             console.log('Connection to ROSBridge WebSocket server closed.');
         });
@@ -809,16 +809,27 @@
 
         var image_sub = new ROSLIB.Topic({
             ros: ros,
-            name: '/image_raw/compressed',
-            messageType: 'sensor_msgs/CompressedImage'
+            name: '/webimage',
+            messageType: 'std_msgs/msg/String'
         })
 
         // 画像トピックの購読，表示
         image_sub.subscribe(function (message) {
-            var data = "data:image/jpeg;base64," + message.data;
-            document.getElementById("bookBg").src = data;
+            console.log("get_images");
+            var data = "data:image/png;base64," + message.data;
+            setBlob(data)
         })
 
+        let prevSrc = '';
+        
+        async function setBlob(data_uri){
+            const blob = await (await fetch(data_uri)).blob();
+            let nowSrc = window.URL.createObjectURL(blob);
+            document.getElementById('bookBg').src = nowSrc;
+            if (prevSrc !== '') window.URL.revokeObjectURL(prevSrc);
+            prevSrc = nowSrc;
+        }
+        
         function setPupilTransform(x, y, scale = 1) {
             const transform = `translate(-50%, -50%) translate(${x}px, ${y}px) scale(${scale})`;
             pupilL.style.transform = transform;
