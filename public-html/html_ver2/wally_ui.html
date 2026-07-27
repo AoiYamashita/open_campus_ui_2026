@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+
+    <!-- roslibのファイルを指定してください -->
+    <script type="text/javascript" src="../roslib.min.js"></script>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Find Wally</title>
+    <link rel="stylesheet" href="./wally_ui.css">
+</head>
+
+<body id="hudBody">
+
+    <div id="ui-container">
+        <!-- 【背景】ウォーリーフェイス -->
+        <div class="wally-fullscreen-bg" id="viewport">
+            <div class="scan-laser"></div>
+            <div class="wally-hat">
+                <div class="hat-frame"></div>
+                <span class="hat_text_left">WHERE'S</span>
+                <span class="hat_text_right">WALLY?</span>
+            </div>
+            <!-- ==========================================
+            【背景】タイマー表示用（ウォーリー画像の上・左上）
+            ========================================== -->
+            <div class="timer-container" id="timerDisplayContainer">
+                <div class="timer-label">SEARCH TIME</div>
+                <div class="timer-display" id="timerDisplay">00:00.00</div>
+            </div>
+
+            <img class="wally-face-overlay" src="./wally_face.png" alt="wally face" />
+
+            <div class="glasses-container">
+                <div class="surprise-mark mark-left" id="markL">❗️</div>
+                <div class="target-lock-box">
+                    <span class="corner topleft"></span>
+                    <span class="corner topright"></span>
+                    <span class="corner bottomleft"></span>
+                    <span class="corner bottomright"></span>
+                </div>
+
+                <div class="lens">
+                    <div class="pupil" id="pupilL"></div>
+                </div>
+
+                <div class="bridge"></div>
+
+                <div class="lens">
+                    <div class="pupil" id="pupilR"></div>
+                </div>
+
+                <div class="surprise-mark mark-right" id="markR">❗️</div>
+            </div>
+        </div>
+
+        <!-- 【前面】オーバーレイHUD -->
+        <div class="hud-overlay-container">
+
+            <!-- 1. [画面中央] メインカメラモニター（最大のまま1カラム表示） -->
+            <div class="camera-row">
+                <div class="center-camera-window" id="cameraWindow">
+                    <div class="camera-header">
+                        <span id="camTitle" style="font-size: 16px;">🔴 CAMERA_FEED</span>
+                    </div>
+                    <div class="camera-feed-canvas">
+                        <img class="camera-book-bg" id="bookBg" alt="camera feed" />
+                        <div class="camera-reticle"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. [最下部] 操作コンソール -->
+            <div class="floating-console-panel">
+
+                <!-- 【ひっそり配置】消す予定の極小デバッグ用発見ボタン
+                <div class="debug-found-zone">
+                    <button class="btn-found-tiny" onclick="foundSystem()">FOUND</button>
+                </div> -->
+
+                <!-- アーム操作用丸ボタン（3ボタン配置は非常にクリーン！） -->
+                <div class="btn-row">
+                    <!-- ① スタート -->
+                    <button class="robot-btn btn-start" onclick="startSystem()">
+                        <span>START</span>
+                    </button>
+
+                    <!-- ② ポーズ（一時停止） -->
+                    <button class="robot-btn btn-pause" onclick="pauseSystem()">
+                        <span>STOP</span>
+                    </button>
+
+                    <!-- ③ リセット -->
+                    <button class="robot-btn btn-reset" onclick="resetSystem()">
+                        <span>RESET</span>
+                    </button>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <script type="text/javascript" src="./wally_ui.js"></script>
+
+</body>
+
+</html>
