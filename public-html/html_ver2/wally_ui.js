@@ -6,7 +6,10 @@ const pupilL = document.getElementById('pupilL');
 const pupilR = document.getElementById('pupilR');
 const camTitle = document.getElementById('camTitle');
 
-// タイマー用の変数
+// BGM
+const se_detect = new Audio("./sounds/detected.mp3");
+
+// 繧ｿ繧､繝槭�逕ｨ縺ｮ螟画焚
 const timerContainer = document.getElementById('timerDisplayContainer');
 const timerDisplay = document.getElementById('timerDisplay');
 let startTime = 0;
@@ -41,24 +44,24 @@ window.addEventListener('resize', updateUiScale);
 const ros = new ROSLIB.Ros({
     url: 'ws://localhost:9090',
     options: {
-        ros_domain_id: '0' // ROS_DOMAIN_IDを設定する
+        ros_domain_id: '0' // ROS_DOMAIN_ID繧定ｨｭ螳壹☆繧�
     }
 });
 
-// Rosbridgeサーバに接続されたらsuccessful
+// Rosbridge繧ｵ繝ｼ繝舌↓謗･邯壹＆繧後◆繧鋭uccessful
 ros.on('connection', function () {
     // document.getElementById('hat_text').style.color = "white";
     console.log('Connected to ROSBridge WebSocket server.');
 });
 
-// Rosbridgeサーバに接続できなかったらerror
+// Rosbridge繧ｵ繝ｼ繝舌↓謗･邯壹〒縺阪↑縺九▲縺溘ｉerror
 ros.on('error', function (error) {
     // document.getElementById('hat_text').style.color = "red";
     document.getElementById('hat_text').innerHTML = "ERROR HAS OCCURRED...";
     console.log('Error connecting to ROSBridge WebSocket server: ', error);
 });
 
-// Rosbridgeサーバから切断されたらclose
+// Rosbridge繧ｵ繝ｼ繝舌°繧牙�譁ｭ縺輔ｌ縺溘ｉclose
 ros.on('close', function () {
     // document.getElementById('hat_text').style.color = "red";
     document.getElementById('hat_text').innerHTML = "CONNECTION HAS BEEN LOST...";
@@ -77,7 +80,7 @@ var image_sub = new ROSLIB.Topic({
     messageType: 'std_msgs/msg/String'
 })
 
-// 画像トピックの購読，表示
+// 逕ｻ蜒上ヨ繝斐ャ繧ｯ縺ｮ雉ｼ隱ｭ�瑚｡ｨ遉ｺ
 image_sub.subscribe(function (message) {
     console.log("get_images");
     var data = "data:image/png;base64," + message.data;
@@ -122,7 +125,7 @@ function updateSystem() {
 
 }
 
-// タイマー表示更新関数
+// 繧ｿ繧､繝槭�陦ｨ遉ｺ譖ｴ譁ｰ髢｢謨ｰ
 function updateTimer() {
     const now = Date.now();
     const diff = now - startTime + elapsedTime;
@@ -139,9 +142,9 @@ function updateTimer() {
 }
 
 
-// 0が通常，1がスタート，2がポーズ・ストップ，3がリセットにする
+// 0縺碁壼ｸｸ��1縺後せ繧ｿ繝ｼ繝茨ｼ�2縺後�繝ｼ繧ｺ繝ｻ繧ｹ繝医ャ繝暦ｼ�3縺後Μ繧ｻ繝�ヨ縺ｫ縺吶ｋ
 
-// 1. スタート
+// 1. 繧ｹ繧ｿ繝ｼ繝�
 function startSystem() {
     if (isScanning && !isPaused) return;
 
@@ -156,10 +159,10 @@ function startSystem() {
     updateSystem();
     scanInterval = setInterval(updateSystem, 400);
 
-    // タイマーの開始・再開
+    // 繧ｿ繧､繝槭�縺ｮ髢句ｧ九�蜀埼幕
     if (!timerInterval) {
         startTime = Date.now();
-        timerInterval = setInterval(updateTimer, 33); // 約30FPSで滑らかに更新
+        timerInterval = setInterval(updateTimer, 33); // 邏�30FPS縺ｧ貊代ｉ縺九↓譖ｴ譁ｰ
     }
 
     var msg = new ROSLIB.Message({
@@ -170,7 +173,7 @@ function startSystem() {
     console.log('Published message on ' + button.name + ': ' + msg.data);
 }
 
-// 2. ポーズ
+// 2. 繝昴�繧ｺ
 function pauseSystem() {
     if (!isScanning || isPaused) return;
 
@@ -182,7 +185,7 @@ function pauseSystem() {
     setPupilTransform(currentEyeX, currentEyeY);
     // bookBg.style.transform = `translate(${currentJitterX}px, ${currentJitterY}px)`;
 
-    // タイマーの一時停止
+    // 繧ｿ繧､繝槭�縺ｮ荳譎ょ●豁｢
     if (timerInterval) {
         clearInterval(timerInterval);
         timerInterval = null;
@@ -197,11 +200,12 @@ function pauseSystem() {
     console.log('Published message on ' + button.name + ': ' + msg.data);
 }
 
-// 3. 発見
+// 3. 逋ｺ隕�
 function foundSystem() {
     isScanning = false;
     isPaused = false;
     clearInterval(scanInterval);
+    se_detect.play();
 
     viewport.classList.remove('scanning-active');
     viewport.classList.add('lock-active');
@@ -210,7 +214,7 @@ function foundSystem() {
     setPupilTransform(0, 0, 1.1);
     // bookBg.style.transform = 'translate(0px, 0px)';
 
-    // タイマーの停止と確定
+    // 繧ｿ繧､繝槭�縺ｮ蛛懈ｭ｢縺ｨ遒ｺ螳�
     if (timerInterval) {
         clearInterval(timerInterval);
         timerInterval = null;
@@ -218,11 +222,13 @@ function foundSystem() {
     }
 }
 
-// 4. リセット
+// 4. 繝ｪ繧ｻ繝�ヨ
 function resetSystem() {
     isScanning = false;
     isPaused = false;
     clearInterval(scanInterval);
+
+    se_detect.pause();
 
     viewport.classList.remove('scanning-active', 'lock-active');
     hudBody.classList.remove('lock-active');
@@ -230,7 +236,7 @@ function resetSystem() {
     setPupilTransform(0, 0, 1);
     // bookBg.style.transform = 'translate(-25%, -25%)';
 
-    // タイマーのリセット
+    // 繧ｿ繧､繝槭�縺ｮ繝ｪ繧ｻ繝�ヨ
     if (timerInterval) {
         clearInterval(timerInterval);
         timerInterval = null;
