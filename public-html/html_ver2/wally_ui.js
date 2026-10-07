@@ -42,7 +42,8 @@ window.addEventListener('resize', updateUiScale);
 
 // Create ros object to communicate over your Rosbridge connection
 const ros = new ROSLIB.Ros({
-    url: 'ws://localhost:9090',
+    // url: 'ws://localhost:9090',
+    url: 'ws://192.168.0.20:9090',
     options: {
         ros_domain_id: '0' // ROS_DOMAIN_ID繧定ｨｭ螳壹☆繧�
     }
@@ -57,14 +58,14 @@ ros.on('connection', function () {
 // Rosbridge繧ｵ繝ｼ繝舌↓謗･邯壹〒縺阪↑縺九▲縺溘ｉerror
 ros.on('error', function (error) {
     // document.getElementById('hat_text').style.color = "red";
-    document.getElementById('hat_text').innerHTML = "ERROR HAS OCCURRED...";
+    // document.getElementById('hat_text').innerHTML = "ERROR HAS OCCURRED...";
     console.log('Error connecting to ROSBridge WebSocket server: ', error);
 });
 
 // Rosbridge繧ｵ繝ｼ繝舌°繧牙�譁ｭ縺輔ｌ縺溘ｉclose
 ros.on('close', function () {
     // document.getElementById('hat_text').style.color = "red";
-    document.getElementById('hat_text').innerHTML = "CONNECTION HAS BEEN LOST...";
+    // document.getElementById('hat_text').innerHTML = "CONNECTION HAS BEEN LOST...";
     console.log('Connection to ROSBridge WebSocket server closed.');
 });
 
@@ -85,6 +86,26 @@ image_sub.subscribe(function (message) {
     console.log("get_images");
     var data = "data:image/png;base64," + message.data;
     setBlob(data)
+})
+
+var finish_flag = new ROSLIB.Topic({
+    ros: ros,
+    name: '/isfinish',
+    messageType: 'std_msgs/msg/Bool'
+})
+
+finish_flag_flag = true
+
+finish_flag.subscribe(function (message) {
+    console.log("finish search",message.data);
+    if(message.data){
+        if(finish_flag_flag){
+            foundSystem()
+            finish_flag_flag = false
+        }
+    }else{
+        finish_flag_flag = true
+    }
 })
 
 let prevSrc = '';
